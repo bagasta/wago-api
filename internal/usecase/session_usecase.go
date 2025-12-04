@@ -329,10 +329,12 @@ func (uc *SessionUseCase) handleIncomingMessage(agentID string, msgEvt *events.M
 		}
 
 		if shouldRespond {
+			uc.sendTyping(agentID, msgEvt.Info.Chat)
 			log.Printf("[Langchain] Executing for agent %s...", agentID)
 			exec, err := uc.langchainUC.Execute(context.Background(), agentID, text, from, nil)
 			if err != nil {
 				log.Printf("langchain execute failed for agent %s: %v", agentID, err)
+				uc.stopTyping(agentID, msgEvt.Info.Chat)
 			} else {
 				reply := extractLangchainReply(exec)
 				if reply != "" {
@@ -351,6 +353,7 @@ func (uc *SessionUseCase) handleIncomingMessage(agentID string, msgEvt *events.M
 					}
 				} else {
 					log.Printf("Langchain returned empty reply")
+					uc.stopTyping(agentID, msgEvt.Info.Chat)
 				}
 			}
 		} else {
@@ -444,6 +447,28 @@ func (uc *SessionUseCase) sendTextMessage(agentID string, to types.JID, text str
 	}
 	_, err := client.SendMessage(context.Background(), to, msg)
 	return err
+}
+
+func (uc *SessionUseCase) sendTyping(agentID string, to types.JID) {
+	uc.mu.RLock()
+	client := uc.clients[agentID]
+	uc.mu.RUnlock()
+	if client != nil {
+		if err := client.SendChatPresence(context.Background(), to, types.ChatPresenceComposing, types.ChatPresenceMediaText); err != nil {
+			log.Printf("Failed to send typing presence to %s: %v", to, err)
+		}
+	}
+}
+
+func (uc *SessionUseCase) stopTyping(agentID string, to types.JID) {
+	uc.mu.RLock()
+	client := uc.clients[agentID]
+	uc.mu.RUnlock()
+	if client != nil {
+		if err := client.SendChatPresence(context.Background(), to, types.ChatPresencePaused, types.ChatPresenceMediaText); err != nil {
+			log.Printf("Failed to send paused presence to %s: %v", to, err)
+		}
+	}
 }
 
 func extractLangchainReply(exec *entity.LangchainExecution) string {
