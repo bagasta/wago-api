@@ -1,0 +1,22 @@
+# Binaries and build artifacts
+/whatsapp-api
+/bin/
+/dist/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Go module/tool caches
+/coverage.out
+/.cache/
+
+# Environment and config secrets
+.env
+config/config.yaml
+
+# Editor/OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo

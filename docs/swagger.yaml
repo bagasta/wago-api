@@ -1,0 +1,203 @@
+basePath: /api/v1
+definitions:
+  handler.AgentRequest:
+    properties:
+      agentId:
+        type: string
+    type: object
+  handler.CreateSessionRequest:
+    properties:
+      agentId:
+        type: string
+      agentName:
+        type: string
+      apiKey:
+        type: string
+      langchainUrl:
+        type: string
+    type: object
+  handler.ExecuteLangchainRequest:
+    properties:
+      agentId:
+        type: string
+      message:
+        type: string
+      params:
+        additionalProperties: true
+        type: object
+      sender:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+  description: WhatsApp REST API with Go and Fiber
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: WhatsApp API
+  version: "1.0"
+paths:
+  /langchain/execute:
+    post:
+      consumes:
+      - application/json
+      description: Proxy a user message to the configured Langchain agent and store
+        execution result
+      parameters:
+      - description: Execution request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.ExecuteLangchainRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Execute Langchain for an agent
+      tags:
+      - langchain
+  /sessions/create:
+    post:
+      consumes:
+      - application/json
+      description: Create a new WhatsApp session and generate QR code
+      parameters:
+      - description: Session Creation Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateSessionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create a new WhatsApp session
+      tags:
+      - sessions
+  /sessions/delete:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a WhatsApp session
+      parameters:
+      - description: Agent Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.AgentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Delete a session
+      tags:
+      - sessions
+  /sessions/detail:
+    get:
+      consumes:
+      - application/json
+      description: Get detailed information about a WhatsApp session
+      parameters:
+      - description: Agent ID
+        in: query
+        name: agentId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get session details
+      tags:
+      - sessions
+  /sessions/status:
+    get:
+      consumes:
+      - application/json
+      description: Get the status of a WhatsApp session
+      parameters:
+      - description: Agent ID
+        in: query
+        name: agentId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get session status
+      tags:
+      - sessions
+swagger: "2.0"
