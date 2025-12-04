@@ -1,0 +1,39 @@
+# Server
+server:
+  port: 8080
+  name: "WhatsApp-API"
+  env: "development"
+
+# Database
+database:
+  host: "localhost"
+  port: 5432
+  user: "postgres"
+  password: "your_password_here"
+  name: "whatsapp_api"
+  ssl_mode: "disable"
+  max_connections: 25
+  max_idle_connections: 5
+
+# WhatsApp
+whatsapp:
+  auto_reconnect: true
+  qr_timeout: 60
+  log_level: "INFO"
+
+# Langchain
+langchain:
+  default_timeout: "60s"
+  max_retries: 3
+  base_url: ""
+
+# Security
+security:
+  api_key_header: "Authorization"
+  rate_limit_requests: 100
+  rate_limit_window: "1m"
+
+# Logging
+logging:
+  level: "info"
+  format: "json"

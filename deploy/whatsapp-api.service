@@ -1,0 +1,28 @@
+[Unit]
+Description=WhatsApp API Go Service
+After=network.target postgresql.service
+
+[Service]
+# User yang menjalankan aplikasi (ganti dengan user di server Anda, misal: ubuntu, root, atau www-data)
+User=root
+Group=root
+
+# Direktori tempat aplikasi berada
+WorkingDirectory=/var/www/whatsapp-api
+
+# Command untuk menjalankan aplikasi
+ExecStart=/var/www/whatsapp-api/whatsapp-api
+
+# Environment variables (opsional, bisa juga dari file .env)
+# Environment="SERVER_ENV=production"
+# Environment="DATABASE_PASSWORD=PasswordDatabaseAnda"
+
+# Restart otomatis jika crash
+Restart=always
+RestartSec=5
+
+# Limit resource (opsional)
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

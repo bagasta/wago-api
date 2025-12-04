@@ -6,17 +6,34 @@
 *.dll
 *.so
 *.dylib
+__debug_bin
 
 # Go module/tool caches
 /coverage.out
 /.cache/
+vendor/
 
 # Environment and config secrets
 .env
 config/config.yaml
 
-# Editor/OS files
-.DS_Store
-Thumbs.db
+# Logs
+*.log
+logs/
+
+# IDE/Editor files
+.idea/
+.vscode/
 *.swp
 *.swo
+.DS_Store
+Thumbs.db
+
+# OS Files
+.AppleDouble
+.LSOverride
+._*
+
+# Test artifacts
+*.test
+

@@ -18,6 +18,7 @@ import (
 	_ "whatsapp-api/docs" // Import generated docs
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 )
@@ -93,6 +94,10 @@ func main() {
 
 	app.Use(logger.New())
 	app.Use(recover.New())
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "*", // Adjust this for production security
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+	}))
 
 	// 8. Setup Router
 	http.NewRouter(app, sessionHandler, langchainHandler)
