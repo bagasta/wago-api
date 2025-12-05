@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"strings"
 	"whatsapp-api/internal/usecase"
 
 	"github.com/gofiber/fiber/v2"
@@ -50,6 +51,12 @@ func (h *SessionHandler) CreateSession(c *fiber.Ctx) error {
 
 	session, err := h.sessionUC.CreateSession(c.Context(), req.AgentID, req.AgentName, req.APIKey, req.LangchainURL)
 	if err != nil {
+		if strings.Contains(err.Error(), "session already exists") {
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+				"success": false,
+				"error":   err.Error(),
+			})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
 			"error":   err.Error(),
