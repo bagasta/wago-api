@@ -519,14 +519,19 @@ func (uc *SessionUseCase) DeleteSession(ctx context.Context, agentID string) err
 		// Delete device from store to prevent stale sessions
 		if client.Store != nil {
 			// Only attempt to delete if we have a valid JID (device is known)
-			if client.Store.ID != nil {
+			if client.Store.ID != nil && !client.Store.ID.IsEmpty() {
+				log.Printf("Attempting to delete device %s from store for agent %s", client.Store.ID.String(), agentID)
 				if err := client.Store.Delete(context.Background()); err != nil {
 					log.Printf("Failed to delete device from store for agent %s: %v", agentID, err)
 				} else {
 					log.Printf("Deleted device from store for agent %s", agentID)
 				}
 			} else {
-				log.Printf("Skipping device store deletion for agent %s: device JID is nil (not paired)", agentID)
+				jidStatus := "nil"
+				if client.Store.ID != nil {
+					jidStatus = "empty"
+				}
+				log.Printf("Skipping device store deletion for agent %s: device JID is %s (not paired)", agentID, jidStatus)
 			}
 		}
 	}
