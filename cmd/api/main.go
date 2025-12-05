@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
+	"net"
+	"syscall"
 	"time"
 
 	"whatsapp-api/internal/delivery/http"
@@ -103,9 +106,7 @@ func main() {
 	http.NewRouter(app, sessionHandler, langchainHandler)
 
 	// 9. Start Server
-	addr := fmt.Sprintf(":%d", cfg.Server.Port)
-	log.Printf("Server starting on %s", addr)
-	if err := app.Listen(addr); err != nil {
+	if err := startServerWithFallback(app, cfg.Server.Port, 10); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}
 }
@@ -134,4 +135,38 @@ func seedDefaultUser(userRepo interface{}) {
 			log.Printf("Default user created. API Key: %s", apiKey)
 		}
 	}
+}
+
+func startServerWithFallback(app *fiber.App, startPort int, attempts int) error {
+	port := startPort
+	for i := 0; i < attempts; i++ {
+		addr := fmt.Sprintf(":%d", port)
+		ln, err := net.Listen("tcp4", addr)
+		if err != nil {
+			if isAddrInUse(err) {
+				log.Printf("Port %d in use, trying %d", port, port+1)
+				port++
+				continue
+			}
+			return err
+		}
+
+		log.Printf("Server starting on %s", addr)
+		return app.Listener(ln)
+	}
+	return fmt.Errorf("no available port in range %d-%d", startPort, startPort+attempts-1)
+}
+
+func isAddrInUse(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, syscall.EADDRINUSE) {
+		return true
+	}
+	var opErr *net.OpError
+	if errors.As(err, &opErr) {
+		return isAddrInUse(opErr.Err)
+	}
+	return false
 }

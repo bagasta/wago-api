@@ -1,7 +1,10 @@
 package config
 
 import (
+	"strings"
+
 	"github.com/spf13/viper"
+	"github.com/subosito/gotenv"
 )
 
 type Config struct {
@@ -55,11 +58,15 @@ type LoggingConfig struct {
 }
 
 func LoadConfig() (*Config, error) {
+	// Load variables from .env if it exists so local overrides work out of the box.
+	_ = gotenv.Load()
+
 	viper.AddConfigPath("config")
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
-
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
+	bindEnvs()
 
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, err
@@ -71,4 +78,36 @@ func LoadConfig() (*Config, error) {
 	}
 
 	return &config, nil
+}
+
+func bindEnvs() {
+	keys := []string{
+		"server.port",
+		"server.name",
+		"server.env",
+		"database.url",
+		"database.host",
+		"database.port",
+		"database.user",
+		"database.password",
+		"database.name",
+		"database.ssl_mode",
+		"database.max_connections",
+		"database.max_idle_connections",
+		"whatsapp.auto_reconnect",
+		"whatsapp.qr_timeout",
+		"whatsapp.log_level",
+		"langchain.default_timeout",
+		"langchain.max_retries",
+		"langchain.base_url",
+		"security.api_key_header",
+		"security.rate_limit_requests",
+		"security.rate_limit_window",
+		"logging.level",
+		"logging.format",
+	}
+
+	for _, key := range keys {
+		_ = viper.BindEnv(key)
+	}
 }

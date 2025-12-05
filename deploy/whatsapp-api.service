@@ -1,5 +1,5 @@
 [Unit]
-Description=WhatsApp API Go Service
+Description=Wago API Go Service
 After=network.target postgresql.service
 
 [Service]
@@ -8,10 +8,13 @@ User=root
 Group=root
 
 # Direktori tempat aplikasi berada
-WorkingDirectory=/var/www/whatsapp-api
+WorkingDirectory=/var/www/wago-api
 
 # Command untuk menjalankan aplikasi
-ExecStart=/var/www/whatsapp-api/whatsapp-api
+ExecStart=/var/www/wago-api/whatsapp-api
+
+# File environment (sesuaikan path jika berbeda)
+EnvironmentFile=/var/www/wago-api/.env
 
 # Environment variables (opsional, bisa juga dari file .env)
 # Environment="SERVER_ENV=production"
