@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"database/sql"
+	"errors"
 	"strings"
 	"whatsapp-api/internal/usecase"
 
@@ -113,6 +115,12 @@ func (h *SessionHandler) GetSessionStatus(c *fiber.Ctx) error {
 			"error":   "Session not found",
 		})
 	}
+	if session == nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"success": false,
+			"error":   "Session not found",
+		})
+	}
 
 	return c.JSON(fiber.Map{
 		"success": true,
@@ -162,8 +170,23 @@ func (h *SessionHandler) DeleteSession(c *fiber.Ctx) error {
 			"error":   "Invalid request body",
 		})
 	}
+	if req.AgentID == "" {
+		req.AgentID = c.Query("agentId")
+	}
+	if req.AgentID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"error":   "AgentID is required",
+		})
+	}
 
 	if err := h.sessionUC.DeleteSession(c.Context(), req.AgentID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"success": false,
+				"error":   "Session not found",
+			})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
 			"error":   err.Error(),
@@ -194,6 +217,12 @@ func (h *SessionHandler) GetSessionDetail(c *fiber.Ctx) error {
 
 	session, err := h.sessionUC.GetSession(c.Context(), req.AgentID)
 	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"success": false,
+			"error":   "Session not found",
+		})
+	}
+	if session == nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"success": false,
 			"error":   "Session not found",

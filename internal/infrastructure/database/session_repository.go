@@ -49,8 +49,14 @@ func (r *sessionRepository) Update(ctx context.Context, session *entity.Session)
 
 func (r *sessionRepository) Delete(ctx context.Context, agentID string) error {
 	query := `DELETE FROM sessions WHERE agent_id = $1`
-	_, err := r.db.ExecContext(ctx, query, agentID)
-	return err
+	result, err := r.db.ExecContext(ctx, query, agentID)
+	if err != nil {
+		return err
+	}
+	if affected, err := result.RowsAffected(); err == nil && affected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
 
 func (r *sessionRepository) GetByAgentID(ctx context.Context, agentID string) (*entity.Session, error) {
