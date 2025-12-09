@@ -116,3 +116,77 @@ sudo apt install certbot python3-certbot-nginx
 sudo certbot --nginx -d wago-api.chiefaiofficer.id
 ```
 Perintah tersebut akan membuatkan file `fullchain.pem` dan `privkey.pem` di `/etc/letsencrypt/live/wago-api.chiefaiofficer.id/`. Setelah tersedia, jangan lupa memastikan `ssl_certificate` dan `ssl_certificate_key` di config Nginx menunjuk ke path tersebut (bawaan contoh ini sudah sesuai).
+
+---
+
+## (Alternatif yang Sedang Dipakai) Traefik sebagai Reverse Proxy
+
+Server ini sudah memiliki Traefik (untuk n8n dan layanan lain). Untuk menghindari bentrok port 80/443, kita biarkan Traefik yang melakukan TLS termination dan hanya tambahkan router baru yang meneruskan ke service systemd di port 9300.
+
+### Langkah
+1) Pastikan aplikasi jalan di host 0.0.0.0:9300:
+   ```bash
+   systemctl status wago-api
+   curl http://127.0.0.1:9300/health
+   ```
+2) Buat/replace kontainer router kecil di network Traefik (`root_default`):
+   ```bash
+   docker rm -f wago-api-router
+   docker run -d --name wago-api-router --restart unless-stopped \
+     --network root_default \
+     -l traefik.enable=true \
+     -l "traefik.http.routers.wago-api.rule=Host(`wago-api.chiefaiofficer.id`)" \
+     -l traefik.http.routers.wago-api.entrypoints=websecure \
+     -l traefik.http.routers.wago-api.tls.certresolver=mytlschallenge \
+     -l traefik.http.services.wago-api.loadbalancer.server.url=http://172.18.0.1:9300 \
+     traefik/whoami
+   ```
+   `172.18.0.1` adalah gateway host di network `root_default` (cek dengan `docker network inspect root_default`). Traefik kemudian akan meneruskan ke host:9300.
+3) Buka firewall sekali saja agar kontainer Traefik bisa mengakses 9300:
+   ```bash
+   sudo ufw allow from 172.18.0.0/16 to any port 9300 proto tcp
+   ```
+4) Verifikasi dari network Traefik:
+   ```bash
+   docker run --rm --network root_default alpine sh -c 'wget -qO- http://172.18.0.1:9300/health'
+   ```
+5) Tes publik:
+```bash
+curl -k https://wago-api.chiefaiofficer.id/health
+```
+   Harus 200 OK. Sertifikat valid dari Let’s Encrypt via resolver `mytlschallenge` milik Traefik.
+
+### Catatan
+- Tidak mengubah konfigurasi atau port Traefik/n8n; hanya menambah router baru.
+- Jika gateway network berubah, perbarui URL load balancer dan rule UFW.
+- Kontainer `traefik/whoami` hanya sebagai “pemegang label” untuk Traefik; trafik sebenarnya diarahkan ke host:9300.
+- Agar router otomatis hidup setelah reboot, buat systemd unit sederhana:
+  ```bash
+  sudo tee /etc/systemd/system/wago-api-router.service > /dev/null <<'EOF'
+  [Unit]
+  Description=Wago API Traefik Router
+  Requires=docker.service
+  After=docker.service
+
+  [Service]
+  Type=simple
+  Restart=always
+  ExecStartPre=-/usr/bin/docker rm -f wago-api-router
+  ExecStart=/usr/bin/docker run --name wago-api-router --restart unless-stopped \
+    --network root_default \
+    -l traefik.enable=true \
+    -l traefik.http.routers.wago-api.rule=Host(`wago-api.chiefaiofficer.id`) \
+    -l traefik.http.routers.wago-api.entrypoints=websecure \
+    -l traefik.http.routers.wago-api.tls.certresolver=mytlschallenge \
+    -l traefik.http.services.wago-api.loadbalancer.server.url=http://172.18.0.1:9300 \
+    traefik/whoami
+  ExecStop=/usr/bin/docker stop wago-api-router
+
+  [Install]
+  WantedBy=multi-user.target
+  EOF
+
+  sudo systemctl daemon-reload
+  sudo systemctl enable --now wago-api-router
+  ```
+  Jika gateway network berbeda, ubah nilai `172.18.0.1` pada service sebelum mengaktifkan.

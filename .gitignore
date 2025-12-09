@@ -2,6 +2,7 @@
 /whatsapp-api
 /bin/
 /dist/
+.build.log
 *.exe
 *.dll
 *.so
@@ -11,10 +12,16 @@ __debug_bin
 # Go module/tool caches
 /coverage.out
 /.cache/
+/.gocache/
+/.gomodcache/
 vendor/
 
 # Environment and config secrets
 .env
+.env.local
+.env.development.local
+.env.production.local
+.env.test.local
 config/config.yaml
 
 # Logs
@@ -36,4 +43,3 @@ Thumbs.db
 
 # Test artifacts
 *.test
-

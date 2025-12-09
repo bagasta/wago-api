@@ -1,0 +1,33 @@
+server:
+  port: 9300
+  name: "WhatsApp-API"
+  env: "production"
+
+database:
+  host: "host.docker.internal"
+  port: 5432
+  user: "postgres"
+  password: "postgres"
+  name: "whatsapp_db"
+  ssl_mode: "disable"
+  max_connections: 25
+  max_idle_connections: 5
+
+whatsapp:
+  auto_reconnect: true
+  qr_timeout: 60
+  log_level: "INFO"
+
+langchain:
+  default_timeout: "60s"
+  max_retries: 3
+  base_url: ""
+
+security:
+  api_key_header: "Authorization"
+  rate_limit_requests: 100
+  rate_limit_window: "1m"
+
+logging:
+  level: "info"
+  format: "json"

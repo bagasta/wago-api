@@ -8,7 +8,11 @@ import (
 )
 
 func NewRouter(app *fiber.App, sessionHandler *handler.SessionHandler, langchainHandler *handler.LangchainHandler) {
+	// Simple health checks for uptime monitoring and load balancers
+	app.Get("/health", healthHandler)
+
 	api := app.Group("/api/v1")
+	api.Get("/health", healthHandler)
 
 	sessions := api.Group("/sessions")
 	sessions.Post("/create", sessionHandler.CreateSession)
@@ -23,4 +27,8 @@ func NewRouter(app *fiber.App, sessionHandler *handler.SessionHandler, langchain
 
 	// Swagger
 	app.Get("/swagger/*", fiberSwagger.HandlerDefault)
+}
+
+func healthHandler(c *fiber.Ctx) error {
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": "ok"})
 }

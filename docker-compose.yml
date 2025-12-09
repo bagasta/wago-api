@@ -1,0 +1,19 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      SERVER_PORT: ${APP_PORT:-9300}
+      DATABASE_URL: ${DB_URI:-postgres://postgres:postgres@host.docker.internal:5432/whatsapp_db?sslmode=disable}
+      LANGCHAIN_BASE_URL: ${LANGCHAIN_BASE_URL:-}
+    ports:
+      - "127.0.0.1:${APP_PORT:-9300}:${APP_PORT:-9300}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:${APP_PORT:-9300}/swagger/index.html"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
