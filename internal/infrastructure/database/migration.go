@@ -11,6 +11,13 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+var coreTables = []string{
+	"users",
+	"sessions",
+	"messages",
+	"langchain_executions",
+}
+
 // RunMigrations executes any *.up.sql files in migrationsDir that haven't been applied yet.
 // It records applied filenames in schema_migrations to avoid re-running them.
 func RunMigrations(ctx context.Context, db *sqlx.DB, migrationsDir string) error {
@@ -38,14 +45,22 @@ func RunMigrations(ctx context.Context, db *sqlx.DB, migrationsDir string) error
 
 	sort.Strings(files)
 
+	missing, err := missingCoreTables(ctx, db)
+	if err != nil {
+		return fmt.Errorf("check existing tables: %w", err)
+	}
+	forceApply := len(missing) > 0
+
 	for _, path := range files {
 		name := filepath.Base(path)
-		applied, err := isApplied(ctx, db, name)
-		if err != nil {
-			return fmt.Errorf("check migration %s: %w", name, err)
-		}
-		if applied {
-			continue
+		if !forceApply {
+			applied, err := isApplied(ctx, db, name)
+			if err != nil {
+				return fmt.Errorf("check migration %s: %w", name, err)
+			}
+			if applied {
+				continue
+			}
 		}
 
 		content, err := os.ReadFile(path)
@@ -69,7 +84,7 @@ func RunMigrations(ctx context.Context, db *sqlx.DB, migrationsDir string) error
 			}
 		}
 
-		if _, err := tx.ExecContext(ctx, `INSERT INTO schema_migrations (name) VALUES ($1)`, name); err != nil {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO schema_migrations (name) VALUES ($1) ON CONFLICT (name) DO NOTHING`, name); err != nil {
 			_ = tx.Rollback()
 			return fmt.Errorf("record migration %s: %w", name, err)
 		}
@@ -111,4 +126,33 @@ func splitStatements(sql string) []string {
 		}
 	}
 	return statements
+}
+
+func missingCoreTables(ctx context.Context, db *sqlx.DB) ([]string, error) {
+	rows, err := db.QueryContext(ctx, `
+		SELECT table_name
+		FROM information_schema.tables
+		WHERE table_schema = current_schema()
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	existing := make(map[string]struct{})
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		existing[strings.ToLower(name)] = struct{}{}
+	}
+
+	var missing []string
+	for _, name := range coreTables {
+		if _, ok := existing[name]; !ok {
+			missing = append(missing, name)
+		}
+	}
+	return missing, rows.Err()
 }
