@@ -46,12 +46,19 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
+	ctx := context.Background()
+
 	// 2. Connect Database
 	db, err := database.NewPostgresConnection(cfg)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer db.Close()
+
+	// 2a. Run database migrations
+	if err := database.RunMigrations(ctx, db, "migrations"); err != nil {
+		log.Fatalf("Failed to run migrations: %v", err)
+	}
 
 	// 3. Initialize Repositories
 	userRepo := database.NewUserRepository(db)
@@ -82,7 +89,7 @@ func main() {
 	sessionUC := usecase.NewSessionUseCase(sessionRepo, messageRepo, waManager, defaultUserID, cfg.Langchain.BaseURL, langchainUC)
 
 	// Initialize existing sessions
-	if err := sessionUC.InitializeSessions(context.Background()); err != nil {
+	if err := sessionUC.InitializeSessions(ctx); err != nil {
 		log.Printf("Failed to initialize sessions: %v", err)
 	}
 
