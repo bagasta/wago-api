@@ -58,9 +58,15 @@ func RunMigrations(ctx context.Context, db *sqlx.DB, migrationsDir string) error
 			return fmt.Errorf("begin tx for %s: %w", name, err)
 		}
 
-		if _, err := tx.ExecContext(ctx, string(content)); err != nil {
-			_ = tx.Rollback()
-			return fmt.Errorf("execute migration %s: %w", name, err)
+		statements := splitStatements(string(content))
+		for _, stmt := range statements {
+			if stmt == "" {
+				continue
+			}
+			if _, err := tx.ExecContext(ctx, stmt); err != nil {
+				_ = tx.Rollback()
+				return fmt.Errorf("execute migration %s: %w", name, err)
+			}
 		}
 
 		if _, err := tx.ExecContext(ctx, `INSERT INTO schema_migrations (name) VALUES ($1)`, name); err != nil {
@@ -93,4 +99,16 @@ func isApplied(ctx context.Context, db *sqlx.DB, name string) (bool, error) {
 		return false, err
 	}
 	return exists, nil
+}
+
+func splitStatements(sql string) []string {
+	raw := strings.Split(sql, ";")
+	statements := make([]string, 0, len(raw))
+	for _, stmt := range raw {
+		trimmed := strings.TrimSpace(stmt)
+		if trimmed != "" {
+			statements = append(statements, trimmed)
+		}
+	}
+	return statements
 }
