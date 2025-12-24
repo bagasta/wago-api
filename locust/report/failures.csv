@@ -1,0 +1,2 @@
+Method,Name,Error,Occurrences
+POST,[AUTO] Create Test Session,CatchResponseError('Test endpoint not enabled. Set APP_ENV=testing or development'),2361
