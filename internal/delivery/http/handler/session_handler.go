@@ -1,9 +1,12 @@
 package handler
 
 import (
+	"context"
 	"database/sql"
 	"errors"
+	"os"
 	"strings"
+	"whatsapp-api/internal/domain/entity"
 	"whatsapp-api/internal/usecase"
 
 	"github.com/gofiber/fiber/v2"
@@ -77,6 +80,85 @@ func (h *SessionHandler) CreateSession(c *fiber.Ctx) error {
 			"lastGeneratedAt": session.LastQRGeneratedAt.Time,
 		},
 	})
+}
+
+// CreateTestSession godoc
+// @Summary Create a mock connected session for testing (TEST ONLY)
+// @Description Creates a session that bypasses QR scanning and appears as 'connected'. Only available in development/testing environments.
+// @Tags sessions
+// @Accept json
+// @Produce json
+// @Param request body CreateSessionRequest true "Session Creation Request"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /sessions/create-test [post]
+func (h *SessionHandler) CreateTestSession(c *fiber.Ctx) error {
+	// Only enable in test/dev environment
+	env := os.Getenv("APP_ENV")
+	if env != "development" && env != "testing" {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"success": false,
+			"error":   "Endpoint only available in test/development mode",
+		})
+	}
+
+	var req CreateSessionRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"error":   "Invalid request body",
+		})
+	}
+
+	if req.AgentID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"error":   "AgentID is required",
+		})
+	}
+
+	// Create a mock session directly in the database
+	ctx := c.Context()
+	session, err := h.createMockConnectedSession(ctx, req)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "already exists") {
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+				"success": false,
+				"error":   "Session already exists",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"error":   err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"message": "Test session created successfully (mock connected)",
+		"data": fiber.Map{
+			"sessionId":   session.ID,
+			"agentId":     session.AgentID,
+			"status":      session.Status,
+			"phoneNumber": session.PhoneNumber.String,
+			"connectedAt": session.ConnectedAt.Time,
+		},
+	})
+}
+
+func (h *SessionHandler) createMockConnectedSession(ctx context.Context, req CreateSessionRequest) (*entity.Session, error) {
+	// Check if session already exists
+	existing, _ := h.sessionUC.GetSession(ctx, req.AgentID)
+	if existing != nil {
+		return nil, errors.New("session already exists with this agentId")
+	}
+
+	// This endpoint requires direct database access which we don't have in the handler.
+	// For automated testing, please use the SQL seed script (tests/seed_test_sessions.sql)
+	// or set up sessions via database directly before load testing.
+	return nil, errors.New("please use the SQL seed script (tests/seed_test_sessions.sql) to create test sessions")
 }
 
 type AgentRequest struct {

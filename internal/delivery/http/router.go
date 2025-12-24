@@ -16,6 +16,7 @@ func NewRouter(app *fiber.App, sessionHandler *handler.SessionHandler, langchain
 
 	sessions := api.Group("/sessions")
 	sessions.Post("/create", sessionHandler.CreateSession)
+	sessions.Post("/create-test", sessionHandler.CreateTestSession) // TEST ONLY - bypasses QR scanning
 	sessions.Get("/status", sessionHandler.GetSessionStatus)
 	sessions.Delete("/delete", sessionHandler.DeleteSession)
 	sessions.Get("/detail", sessionHandler.GetSessionDetail)

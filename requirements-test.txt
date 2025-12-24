@@ -1,0 +1,2 @@
+# Dependencies for load testing
+locust==2.20.0
