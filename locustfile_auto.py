@@ -169,16 +169,6 @@ class AutomatedSessionUser(HttpUser):
             logger.error(f"Failed to cleanup session {self.agent_id}: {e}")
 
 
-class HighLoadUser(HttpUser):
-    """
-    Aggressive load testing user with minimal wait time.
-    Use for stress testing.
-    """
-    
-    wait_time = between(0.1, 0.5)  # Very fast
-    tasks = [AutomatedSessionUser]
-
-
 # Event hooks for reporting
 @events.test_start.add_listener
 def on_test_start(environment, **kwargs):
